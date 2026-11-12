@@ -1,10 +1,10 @@
-# GuitarsLA (Frontend)
+# GuitarsLA API (Backend)
 
-Tienda de guitarras hecha con React + TypeScript + Vite. El catálogo se consume desde la API de GuitarsLA y permite registrar nuevas guitarras.
+API RESTful con Node.js, Express, Sequelize y PostgreSQL para el catálogo de guitarras de GuitarsLA. Solo implementa **Crear** y **Leer**.
 
 ## Requisitos
 - Node.js 18 o superior
-- El backend de GuitarsLA corriendo (ver el README del proyecto `PERN`)
+- PostgreSQL (local o en la nube, por ejemplo Render)
 
 ## 1. Instalar dependencias
 ```bash
@@ -12,44 +12,67 @@ npm install
 ```
 
 ## 2. Configurar variables de entorno
-Crea un archivo `.env` en la raíz :
+Crea un archivo `.env` en la raíz del proyecto (puedes copiar `.env.example`):
 
 ```env
-VITE_API_URL=http://localhost:4002
+DATABASE_URL=postgresql://USUARIO:PASSWORD@HOST:5432/NOMBRE_DB
+PORT=4002
+FRONTEND_URL=http://localhost:5173
 ```
 
-`VITE_API_URL` es la URL del backend. Si no se define, usa `http://localhost:4002`.
+- `DATABASE_URL`: cadena de conexión a PostgreSQL. Si la base está en Render, agrega `?ssl=true` al final.
+- `PORT`: puerto de la API (por defecto 4002).
+- `FRONTEND_URL`: origen permitido por CORS (el de React). Acepta varios separados por coma.
 
-## 3. Arrancar el servidor de desarrollo
+> El archivo `.env` está en `.gitignore`. No lo subas a GitHub.
+
+## 3. Cargar datos iniciales (opcional)
+```bash
+npm run seed
+```
+Crea la tabla `guitars` y carga 12 guitarras de ejemplo. Solo inserta si la tabla está vacía.
+
+## 4. Arrancar el servidor
 ```bash
 npm run dev
 ```
-Abre `http://localhost:5173`.
+La API queda disponible en `http://localhost:4002`. Al iniciar, Sequelize crea o actualiza las tablas automáticamente.
 
-> Levanta primero el backend y después el frontend. El backend debe permitir el origen `http://localhost:5173` en su variable `FRONTEND_URL`.
+## Endpoints
 
-## Scripts
-| Comando           | Descripción                          |
-|-------------------|--------------------------------------|
-| `npm run dev`     | Servidor de desarrollo               |
-| `npm run build`   | Compila TypeScript y genera `dist/`  |
-| `npm run preview` | Previsualiza el build                |
-| `npm run lint`    | Ejecuta ESLint                       |
+| Método | Ruta           | Descripción                     |
+|--------|----------------|---------------------------------|
+| GET    | `/api/guitars` | Devuelve todas las guitarras    |
+| POST   | `/api/guitars` | Registra una nueva guitarra     |
 
-## Funcionalidades
-- **Catálogo (Read):** lista las guitarras desde `GET /api/guitars`, con estados de carga y error.
-- **Formulario (Create):** envía `POST /api/guitars` con validaciones en el cliente (campos vacíos, precio no numérico o menor o igual a 0) y muestra los errores del servidor.
-- **Carrito:** agregar, quitar, cambiar cantidades y vaciar, guardado en `localStorage`.
+### Modelo `guitars`
+| Campo         | Tipo           | Reglas                                    |
+|---------------|----------------|-------------------------------------------|
+| `brand`       | STRING(100)    | Obligatorio (marca)                       |
+| `name`        | STRING(100)    | Obligatorio (modelo)                      |
+| `description` | STRING(500)    | Obligatorio                               |
+| `price`       | DECIMAL(8,2)   | Obligatorio, numérico y mayor a 0         |
+| `image`       | STRING(255)    | Obligatorio (nombre de archivo o URL)     |
+
+### Ejemplo POST
+```bash
+curl -X POST http://localhost:4002/api/guitars \
+  -H "Content-Type: application/json" \
+  -d '{"brand":"Fender","name":"Stratocaster","description":"Clásica de seis cuerdas","price":899.99,"image":"guitarra_01"}'
+```
+Respuestas: `201 { "data": {...} }` si se guardó, `400 { "errors": [...] }` si falla la validación.
+
+## CORS
+Configurado con el paquete `cors`. Solo permite los orígenes de `FRONTEND_URL` y los métodos `GET`, `POST` y `OPTIONS`.
 
 ## Estructura
 ```
 src/
-├── api/guitars.ts            # Llamadas fetch a la API
-├── components/
-│   ├── Guitar.tsx
-│   ├── GuitarForm.tsx
-│   └── Header.tsx
-├── hooks/useCart.ts          # Catálogo + carrito
-├── App.tsx
-└── types.d.ts
+├── config/db.ts          # Conexión Sequelize
+├── models/Guitar.model.ts
+├── handlers/guitar.ts    # Validaciones y controladores
+├── router.ts             # Rutas
+├── server.ts             # Express + CORS
+├── seed.ts               # Datos iniciales
+└── index.ts              # Arranque
 ```
