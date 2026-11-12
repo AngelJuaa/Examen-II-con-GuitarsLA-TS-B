@@ -12,7 +12,7 @@ npm install
 ```
 
 ## 2. Configurar variables de entorno
-Crea un archivo `.env` en la raíz (puedes copiar `.env.example`):
+Crea un archivo `.env` en la raíz :
 
 ```env
 VITE_API_URL=http://localhost:4002
